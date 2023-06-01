@@ -4,6 +4,9 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import mysql from 'mysql2';
+import { LoggersController } from './loggers/loggers.controller';
+import { LoggersService } from './loggers/loggers.service';
+import { LoggersModule } from './loggers/loggers.module';
 
 @Module({
   imports: [
@@ -11,18 +14,19 @@ import mysql from 'mysql2';
     //MongooseModule.forRoot('mongodb://localhost:27017/loggers'),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'db',
+      host: 'localhost',
       port: 3306,
       driver: mysql,
       username: 'root',
       password: 'root',
       database: 'controll_loggers',
-      entities: ['src/**/entity/.entity{.ts,.js}'],
+      entities: [__dirname + '/../**/*.entity.{js,ts}'],
       synchronize: false,
       migrations: ['dist/migrations/*{.ts,.js}'],
       migrationsTableName: 'migrations_typeorm',
       migrationsRun: true,
     }),
+    LoggersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
