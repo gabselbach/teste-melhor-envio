@@ -3,13 +3,13 @@ import { Repository } from 'typeorm';
 import { LoggerEntity } from './entity/logger.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as path from 'path';
-import { async, buffer } from 'rxjs';
 import { InsertLoggerDto } from './dto/insert-logger.dto';
 import * as fs from 'fs';
 import * as readline from 'readline';
 import { v4 as uuidv4 } from 'uuid';
 import { ILogger } from './interface/logger.interface';
 import { ETypeLatences } from './types/util';
+import * as csv from 'fast-csv';
 @Injectable()
 export class LoggersService {
   constructor(
@@ -23,6 +23,11 @@ export class LoggersService {
       output: process.stdout,
       terminal: false,
     });
+
+    const csvPerServices = fs.createWriteStream(
+      path.join(__dirname, 'averageLoggers.csv'),
+    );
+    const outro = fs.createWriteStream(path.join(__dirname, 'outro.csv'));
     const logs: ILogger[] = [];
     let data = '';
     const re = new RegExp(/{|}|\w{2,}|\[|\]/g);
@@ -78,25 +83,49 @@ export class LoggersService {
           servicesRequest[indexService].totalRequest += 1;
         }
       }
-
+      const csvStream = csv.format({ headers: true });
+      csvStream.pipe(csvPerServices).on('end', () => process.exit());
+      const date = new Date();
+      const formatDate = new Date().toLocaleDateString('en-US');
       const averagesPerService = servicesRequest.map((item) => {
+        const avgRequests =
+          this.calculateAvg(logs, item.id, ETypeLatences.REQUEST) /
+          item.totalRequest;
+        const avgProxy =
+          this.calculateAvg(logs, item.id, ETypeLatences.PROXY) /
+          item.totalRequest;
+        const avgGateway =
+          this.calculateAvg(logs, item.id, ETypeLatences.GATEWAY) /
+          item.totalRequest;
+        csvStream.write({
+          idService: item.id,
+          TotalRequests: item.totalRequest,
+          AverageRequest: avgRequests,
+          AverageProxy: avgProxy,
+          AverageGateway: avgGateway,
+          createdAt: formatDate,
+        });
         return {
           ...item,
-          avgRequests:
-            this.calculateAvg(logs, item.id, ETypeLatences.REQUEST) /
-            item.totalRequest,
-          avgProxy:
-            this.calculateAvg(logs, item.id, ETypeLatences.PROXY) /
-            item.totalRequest,
-          avgGateway:
-            this.calculateAvg(logs, item.id, ETypeLatences.GATEWAY) /
-            item.totalRequest,
+          avgRequests,
+          avgProxy,
+          avgGateway,
         };
       });
+      csvStream.end();
+      const novo = csv.format({ headers: true });
+      novo.pipe(outro).on('end', () => process.exit());
+      consumersRequest.forEach((elem) => {
+        novo.write({
+          idConsumer: elem.id,
+          TotalRequestsPer: elem.totalRequest,
+        });
+      });
+      novo.end();
     });
   }
 
-  calculateAvg(
+  public calculateAvg(
     logs: ILogger[],
     serviceId: string,
     index: ETypeLatences,
