@@ -2,15 +2,14 @@ version: '3.6'
 volumes:
   data:
 services:
-  #app:
-  #- build: .
-  #-- ports:
-    # - 3000:3000
-    #volumes:
-    #  - .:/home/node/app
-    #depends_on: 
-    #  - db
-      
+  app:
+    build: .
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/home/node/app
+    depends_on: 
+      - db
   db:
     image: mysql:5.7
     ports:

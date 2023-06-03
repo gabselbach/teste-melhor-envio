@@ -27,7 +27,9 @@ export interface ILogger {
     };
   };
   authenticated_entity: {
-    consumer_id: string;
+    consumer_id: {
+      uuid: string;
+    };
   };
   route: {
     created_at: number;

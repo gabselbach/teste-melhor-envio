@@ -8,9 +8,9 @@ export const AppDataSource = new DataSource({
   username: 'root',
   password: 'root',
   database: 'controll_loggers',
-  entities: [__dirname + '/../**/*.entity.{js,ts}'],
-  synchronize: true,
-  migrations: ['dist/migrations/*{.ts,.js}'],
+  entities: ['dist/src/**/entity/*.js'],
+  synchronize: false,
+  migrations: ['dist/migrations/*{.js}'],
   migrationsTableName: 'migrations_typeorm',
   migrationsRun: true,
 });
