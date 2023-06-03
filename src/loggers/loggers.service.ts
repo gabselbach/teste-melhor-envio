@@ -3,7 +3,6 @@ import { Repository } from 'typeorm';
 import { LoggerEntity } from './entity/logger.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as path from 'path';
-import { InsertLoggerDto } from './dto/insert-logger.dto';
 import * as fs from 'fs';
 import * as readline from 'readline';
 import { v4 as uuidv4 } from 'uuid';
@@ -179,9 +178,10 @@ export class LoggersService {
     }
     return;
   }
-  async insertLogger(logger: InsertLoggerDto): Promise<number> {
-    const now = new Date().getTime();
-    const logs = (await this.readLogs(logger.path)) as ILogger[];
+  async insertLogger() {
+    const logs = (await this.readLogs(
+      this.configService.get<string>('FILE_LOGS'),
+    )) as ILogger[];
     const { consumersRequest, servicesRequest } = await this.processDataService(
       logs,
     );
@@ -189,8 +189,6 @@ export class LoggersService {
     await this.prepareWriteFile('averageLoggers.csv', dataService);
     await this.prepareWriteFile('customerPerRequest.csv', consumersRequest);
     await this.registerLogsInDatabase(logs);
-    const finish = new Date().getTime();
-    return finish - now;
   }
 
   public calculateAvg(
@@ -205,117 +203,5 @@ export class LoggersService {
       return acc;
     }, 0);
     return avg;
-  }
-
-  async insertLogger3(logger: InsertLoggerDto): Promise<any> {
-    const filer = readline.createInterface({
-      input: fs.createReadStream(
-        path.join(
-          this.configService.get<string>('PATH_FILE_LOGS'),
-          logger.path,
-        ),
-        'utf-8',
-      ),
-      output: process.stdout,
-      terminal: false,
-      crlfDelay: Infinity,
-    });
-    const logs: ILogger[] = [];
-    for await (const line of filer) {
-      logs.push(JSON.parse(line));
-    }
-    const pathService = path.join(
-      this.configService.get<string>('PATH_FILE_LOGS'),
-      'averageLoggers.csv',
-    );
-    const pathTotalCustomer = path.join(
-      this.configService.get<string>('PATH_FILE_LOGS'),
-      'customerperRequest.csv',
-    );
-    const fileWriteAverageServices = fs.createWriteStream(pathService);
-    const csvService = csv.format({ headers: true });
-    csvService.pipe(fileWriteAverageServices).on('end', () => process.exit());
-    const fileWriteTotalCustomers = fs.createWriteStream(pathTotalCustomer);
-    const csvCustomer = csv.format({ headers: true });
-    csvCustomer.pipe(fileWriteTotalCustomers).on('end', () => process.exit());
-
-    const consumersRequest: {
-      uuid: string;
-      totalRequest: number;
-    }[] = [];
-
-    const servicesRequest: {
-      id: string;
-      totalRequest: number;
-      avgRequests?: number;
-      avgProxy?: number;
-      avgGateway?: number;
-    }[] = [];
-    for (let i = 0; i < logs.length; i++) {
-      const indexConsumer = consumersRequest.findIndex(
-        (elem) => elem.uuid === logs[i].authenticated_entity.consumer_id.uuid,
-      );
-      if (indexConsumer === -1) {
-        consumersRequest.push({
-          uuid: logs[i].authenticated_entity.consumer_id.uuid,
-          totalRequest: 1,
-        });
-      } else {
-        consumersRequest[indexConsumer].totalRequest += 1;
-      }
-
-      const indexService = servicesRequest.findIndex(
-        (elem) => elem.id === logs[i].service.id,
-      );
-      if (indexService === -1) {
-        servicesRequest.push({
-          id: logs[i].service.id,
-          totalRequest: 1,
-        });
-      } else {
-        servicesRequest[indexService].totalRequest += 1;
-      }
-    }
-    const date = new Date();
-    const formatDate = new Date().toLocaleDateString('en-US');
-    const averagesPerService = servicesRequest.map((item) => {
-      const avgRequests =
-        this.calculateAvg(logs, item.id, ETypeLatences.REQUEST) /
-        item.totalRequest;
-      const avgProxy =
-        this.calculateAvg(logs, item.id, ETypeLatences.PROXY) /
-        item.totalRequest;
-      const avgGateway =
-        this.calculateAvg(logs, item.id, ETypeLatences.GATEWAY) /
-        item.totalRequest;
-      csvService.write({
-        idService: item.id,
-        TotalRequests: item.totalRequest,
-        AverageRequest: avgRequests.toFixed(2),
-        AverageProxy: avgProxy.toFixed(2),
-        AverageGateway: avgGateway.toFixed(2),
-        createdAt: formatDate,
-      });
-      return {
-        ...item,
-        avgRequests,
-        avgProxy,
-        avgGateway,
-      };
-    });
-    csvService.end();
-    consumersRequest.forEach((elem) => {
-      csvCustomer.write({
-        idConsumer: elem.uuid,
-        TotalRequestsPer: elem.totalRequest,
-      });
-    });
-    csvCustomer.end();
-    for (const elem of logs) {
-      await this.loggerRepository.save({
-        id: uuidv4(),
-        context: JSON.stringify(elem),
-      });
-    }
   }
 }

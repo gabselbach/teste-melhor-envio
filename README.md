@@ -1,73 +1,70 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# :bar_chart: Sitema de Logs
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Sistema desenvolvido para processar os logs geradas por um sistema de API Gateway.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+### Tecnologias
+![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=for-the-badge&logo=nestjs&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![MySQL](https://img.shields.io/badge/mysql-%2300f.svg?style=for-the-badge&logo=mysql&logoColor=white)
 
-## Description
+## Dependências
+Para você rodar o projeto precisa ter instalado em sua máquina o Docker. Caso não tenha entre na [documentação](https://docs.docker.com/engine/install/) para instalar
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Executar o sistema  
 
-## Installation
+### Setup do projeto 
+Altere o nome do arquivo .env.example somente para .env e siga os próximos passos.
+
+Para executar o projeto rode 
 
 ```bash
-$ npm install
+docker-compose up -d 
 ```
-
-## Running the app
+### Rodar a migração
+Para deixar o banco de dados funcional rode no terminal 
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run typeorm migration:run -- -d src/ormconfig.ts
 ```
+### Setup de arquivo
+dentro da pasta src/loggers/files existe um arquivo que foi usado para teste menor chamado logs.txt, você pode substituir ele pelo arquivo original.
 
-## Test
+## Como processar os logs
+Você pode usar a ferramenta que preferir para fazer Requests, eu recomendo o [Postman](https://www.postman.com/). Será necessário fazer uma request para o endpoint:
 
-```bash
-# unit tests
-$ npm run test
+> GET: http://localhost:3000/loggers
 
-# e2e tests
-$ npm run test:e2e
+Essa requisição gerará dois arquivos csv dentro da pasta /src/loggers/files:
 
-# test coverage
-$ npm run test:cov
+> averageLoggers.csv 
+...
+
+ - Requisições por serviço
+ - Tempo médio de request , proxy e gateway por serviço.
+ 
+> customerPerRequest.csv 
+...
+
+ - Requisições por consumidor;
+
+Está requisição também salva as informações no banco de dados, mas para arquivos grandes é possível que a requisição demore, até salvar todos os dados.
+
+## Visualização do banco de dados
+
+Foi criado um container para o phpMyAdmin, onde é possível ver os dados, pelo navegador acessando:
+
 ```
+http://localhost:8080
+```
+Os dados de User e password estão do arquivo .env
 
-## Support
+## Melhorias
+Está foi uma versão do sistema que pode ser melhora com os seguintes pontos:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+- [ ] Criar endpoints separados para armazenar as informações e outro para geração dos csvs;
+- [ ] Usar como banco de dados o MongoDB. Acredito que  ele é bem mais indicado para esse tipo de sistema.
+- [ ] Desenvolver um sistema de login e proteger as rotas com jwt
+- [ ] Descrever as apis usando swagger 
+- [ ] Implementar mais testes
+- [ ] Caso deseje continuar usando mysql é interessante pesquisar e implementar um sistema de pools para otimizar a escrita no banco.
+ 
